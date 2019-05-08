@@ -13,7 +13,7 @@ Created by PyCharm.
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .utils import NormedConv2D, NormedLinear
+from .utils import NormedConv2D, NormedLinear, Flatten
 
 
 class ResBlock(nn.Module):
@@ -22,6 +22,10 @@ class ResBlock(nn.Module):
         super(ResBlock, self).__init__()
         if self.downsample:
             self.branch1 = NormedConv2D(in_channels, out_channels, kernel_size=1, stride=2)
+        elif in_channels != out_channels:
+            self.branch1 = NormedConv2D(in_channels, out_channels, kernel_size=1)
+        else:
+            self.branch1 = nn.Identity()
         self.branch2a = NormedConv2D(in_channels, out_channels // 4, kernel_size=1)
         self.branch2b = NormedConv2D(in_channels=out_channels // 4,
                                      out_channels=out_channels // 4,
@@ -31,7 +35,7 @@ class ResBlock(nn.Module):
         self.branch2c = NormedConv2D(out_channels // 4, out_channels, kernel_size=1)
 
     def forward(self, x):
-        branch1 = self.branch1(x) if self.downsample else x
+        branch1 = self.branch1(x)
         branch2a = F.relu_(self.branch2a(x))
         branch2b = F.relu_(self.branch2b(branch2a))
         branch2c = self.branch2c(branch2b)
@@ -60,6 +64,7 @@ class ResNet50(nn.Module):
         self.res5b = ResBlock(2048, 2048)
         self.res5c = ResBlock(2048, 2048)
         self.avepool = nn.AdaptiveAvgPool2d((1, 1))
+        self.flatten = Flatten()
         self.fc = NormedLinear(2048, n_classes)
 
     def _init_weights(self):
@@ -84,11 +89,12 @@ class ResNet50(nn.Module):
         x = self.res4e(x)
         x = self.res4f(x)
 
-        x = self.res2a(x)
-        x = self.res2b(x)
-        x = self.res2c(x)
+        x = self.res5a(x)
+        x = self.res5b(x)
+        x = self.res5c(x)
 
         x = self.avepool(x)
+        x = self.flatten(x)
         x = self.fc(x)
 
         return x

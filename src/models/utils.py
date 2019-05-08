@@ -75,14 +75,15 @@ class NormedConv2D(nn.Conv2d):
             weight_mean = weight.view(weight.size(0), -1).mean(1).view(*reshaped_size)
             weight = weight - weight_mean
             weight_std = weight.view(weight.size(0), -1).std(1).view(*reshaped_size)
-            weight_std = torch.clamp(weight_std, 1e-3, weight_std.max())
-            self._normed_weight = weight / weight_std.expand_as(weight)
+            weight_std = torch.clamp(weight_std, 1e-3)
+            self._normed_weight = Parameter(weight / weight_std.expand_as(weight))
 
     @staticmethod
     def _get_fused_weights(self, *_):
         if self.training:
-            self.fused_weight = self._scale_weight.expand_as(self._normed_weight) * self._normed_weight
-            self.fused_bias = self._scale_bias
+            reshaped_size = (-1,) + (1,) * (len(self._normed_weight.shape) - 1)
+            self.fused_weight = Parameter(self._scale_weight.view(*reshaped_size) * self._normed_weight)
+            self.fused_bias = Parameter(self._scale_bias)
 
     def forward(self, x):
         if self.training:
@@ -116,14 +117,15 @@ class NormedLinear(nn.Linear):
             weight_mean = weight.view(weight.size(0), -1).mean(1).view(*reshaped_size)
             weight = weight - weight_mean
             weight_std = weight.view(weight.size(0), -1).std(1).view(*reshaped_size)
-            weight_std = torch.clamp(weight_std, 1e-3, weight_std.max())
-            self._normed_weight = weight / weight_std.expand_as(weight)
+            weight_std = torch.clamp(weight_std, 1e-3)
+            self._normed_weight = Parameter(weight / weight_std.expand_as(weight))
 
     @staticmethod
     def _get_fused_weights(self, *_):
         if self.training:
-            self.fused_weight = self._scale_weight.expand_as(self._normed_weight) * self._normed_weight
-            self.fused_bias = self._scale_bias
+            reshaped_size = (-1,) + (1,) * (len(self._normed_weight.shape) - 1)
+            self.fused_weight = Parameter(self._scale_weight.view(*reshaped_size) * self._normed_weight)
+            self.fused_bias = Parameter(self._scale_bias)
 
     def forward(self, x):
         if self.training:
@@ -132,3 +134,12 @@ class NormedLinear(nn.Linear):
         else:
             x = F.conv2d(x, self.fused_weight, self.fused_bias)
         return x
+
+
+class Flatten(nn.Module):
+
+    def __init__(self):
+        super(Flatten, self).__init__()
+
+    def forward(self, x):
+        return x.reshape(x.shape[0], -1)
