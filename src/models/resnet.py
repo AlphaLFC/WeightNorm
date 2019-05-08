@@ -67,8 +67,12 @@ class ResNet50(nn.Module):
         self.flatten = Flatten()
         self.fc = NormedLinear(2048, n_classes)
 
+        self._init_weights()
+
     def _init_weights(self):
-        pass
+        for m in self.modules():
+            if isinstance(m, NormedConv2D):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
 
     def forward(self, x):
         x = self.conv1(x)

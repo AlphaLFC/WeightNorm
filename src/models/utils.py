@@ -60,7 +60,7 @@ class NormedConv2D(nn.Conv2d):
         self.register_parameter('_normed_weight', None)
         self.register_forward_pre_hook(self._get_normed_weight)
 
-        self._scale_weight = Parameter(torch.ones(self.out_channels))
+        self._scale_weight = Parameter(torch.full((self.out_channels,), 0.1))
         self._scale_bias = Parameter(torch.zeros(self.out_channels))
 
         self.register_parameter('fused_weight', None)

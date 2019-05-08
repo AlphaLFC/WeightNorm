@@ -17,13 +17,17 @@ from src.models.resnet import ResNet50
 
 # Hyper-parameters
 num_epochs = 80
-learning_rate = 0.0001
+learning_rate = 0.001
 batch_size = 256
 
 # Image preprocessing modules
-transform = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor()])
+transform = transforms.Compose(
+    [
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [1.0, 1.0, 1.0])
+    ]
+)
 
 # CIFAR-100 dataset
 train_dataset = CIFAR100(root='/data/github/WeightNorm/data/',
